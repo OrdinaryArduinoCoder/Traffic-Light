@@ -1,0 +1,121 @@
+// Ampel Belegung der Ausgaenge
+const byte RotPin = 2;        // Auto Rot
+const byte GelbPin = 3;       // Auto Gelb
+const byte GruenPin = 4;      // Auto Grün
+const byte FGRotPin = 6;      // Fußgänger Rot
+const byte FGGruenPin = 7;    // Fußgänger Grün
+const byte FGTasterPin = 8;   // Anforderungstaster
+
+//
+const boolean ein = HIGH;
+const boolean aus = LOW;
+//
+const int ZEITROTPHASE = 3000;
+const int ZEITGELBPHASE = 1000;
+const int ZEITMINGRUENPHASE = 2000;
+unsigned long ampelMillis;
+unsigned long ampelIntervall;
+boolean tasterGedrueckt = false;
+//
+enum ZUSTAENDE {AUTO_ROT, AUTO_ROTGELB, AUTO_GRUEN, AUTO_GELB, FUSS_ROT, FUSS_WARTE, FUSS_GRUEN};
+byte zustand = AUTO_ROT;
+
+void setup() {
+  // Definiert die Pins als Ausgang
+  pinMode(RotPin, OUTPUT);
+  pinMode(GelbPin, OUTPUT);
+  pinMode(GruenPin, OUTPUT);
+  pinMode(FGRotPin, OUTPUT);
+  pinMode(FGGruenPin, OUTPUT);
+  pinMode(FGTasterPin, INPUT_PULLUP);
+
+  // Initialzustand
+  digitalWrite(FGRotPin, HIGH);  // Fußgänger startet mit Rot
+  digitalWrite(FGGruenPin, LOW);
+}
+
+void loop() {
+  // Prüfen, ob der Taster gedrückt wurde
+  if (digitalRead(FGTasterPin) == LOW) {
+    tasterGedrueckt = true;
+  }
+
+  // Ampelschaltung
+  if (millis() - ampelMillis >= ampelIntervall) {
+    switch (zustand) {
+      case AUTO_ROT:
+        digitalWrite(RotPin, HIGH);
+        digitalWrite(GelbPin, LOW);
+        digitalWrite(GruenPin, LOW);
+        digitalWrite(FGRotPin, HIGH);
+        digitalWrite(FGGruenPin, LOW);
+        zustand = AUTO_ROTGELB;
+        ampelMillis = millis();
+        ampelIntervall = ZEITROTPHASE;
+        break;
+
+      case AUTO_ROTGELB:
+        digitalWrite(RotPin, HIGH);
+        digitalWrite(GelbPin, HIGH);
+        digitalWrite(GruenPin, LOW);
+        zustand = AUTO_GRUEN;
+        ampelMillis = millis();
+        ampelIntervall = ZEITGELBPHASE;
+        break;
+
+      case AUTO_GRUEN:
+        digitalWrite(RotPin, LOW);
+        digitalWrite(GelbPin, LOW);
+        digitalWrite(GruenPin, HIGH);
+        if (tasterGedrueckt) {  // Taster wurde gedrückt
+          zustand = AUTO_GELB;  // Schalte erst die Verkehrsampel auf Gelb
+          tasterGedrueckt = false;  // Tasterstatus zurücksetzen
+        } else {
+          zustand = AUTO_GELB;  // Normaler Übergang zu Gelb
+        }
+        ampelMillis = millis();
+        ampelIntervall = ZEITMINGRUENPHASE;
+        break;
+
+      case AUTO_GELB:
+        digitalWrite(RotPin, LOW);
+        digitalWrite(GelbPin, HIGH);
+        digitalWrite(GruenPin, LOW);
+        if (tasterGedrueckt) {
+          zustand = FUSS_WARTE;  // Verkehrsampel wird auf Rot geschaltet, dann Fußgänger
+        } else {
+          zustand = AUTO_ROT;
+        }
+        ampelMillis = millis();
+        ampelIntervall = ZEITGELBPHASE;
+        break;
+
+      case FUSS_WARTE:  // Wartephase, Autos auf Rot, Fußgänger bleibt Rot
+        digitalWrite(RotPin, HIGH);  // Autos haben Rot
+        digitalWrite(GelbPin, LOW);
+        digitalWrite(GruenPin, LOW);
+        digitalWrite(FGRotPin, HIGH);  // Fußgänger bleibt Rot
+        digitalWrite(FGGruenPin, LOW);
+        zustand = FUSS_GRUEN;
+        ampelMillis = millis();
+        ampelIntervall = ZEITGELBPHASE;  // kurze Verzögerung
+        break;
+
+      case FUSS_GRUEN:
+        digitalWrite(FGRotPin, LOW);  // Fußgänger bekommt Grün
+        digitalWrite(FGGruenPin, HIGH);
+        zustand = FUSS_ROT;
+        ampelMillis = millis();
+        ampelIntervall = ZEITMINGRUENPHASE;
+        break;
+
+      case FUSS_ROT:
+        digitalWrite(FGRotPin, HIGH);  // Fußgänger wieder Rot
+        digitalWrite(FGGruenPin, LOW);
+        zustand = AUTO_ROT;
+        ampelMillis = millis();
+        ampelIntervall = ZEITROTPHASE;
+        break;
+    }
+  }
+}
