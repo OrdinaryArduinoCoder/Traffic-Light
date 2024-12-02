@@ -1,0 +1,20 @@
+// Funktion zum Blinken aller LEDs
+void blinkAllLEDs(int times, int delayTime) {
+  for (int t = 0; t < times; t++) {
+    for (int i = 0; i < numLEDs; i++) {
+      digitalWrite(ledPins[i], HIGH); // Alle LEDs einschalten
+    }
+    delay(delayTime); // Kurze Pause
+    for (int i = 0; i < numLEDs; i++) {
+      digitalWrite(ledPins[i], LOW); // Alle LEDs ausschalten
+    }
+    delay(delayTime); // Kurze Pause
+  }
+}
+
+void loop() {
+  blinkAllLEDs(3, 200); // Blinkt 3-mal mit 200 ms Pause zwischen den Blinks
+  int diceValue = random(1, 7); // Generiert eine zufällige Zahl zwischen 1 und 6
+  displayDiceValue(diceValue); // Zeigt den Würfelwert an
+  delay(1000); // Wartet eine Sekunde vor dem nächsten Wurf
+}
